@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JUMPCUT</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="logo">JUMPCUT</div>
+  <div id="fileName" class="file"></div>
+  <div class="spacer"></div>
+  <div id="summaryTop" class="summary-top mono"></div>
+  <button id="btnOpen">영상 열기</button>
+  <button id="btnExport" class="primary" hidden>내보내기</button>
+</header>
+
+<!-- 시작 화면 -->
+<main id="empty" class="empty">
+  <div id="drop" class="drop">
+    <p class="big">영상을 여기에 끌어다 놓으세요</p>
+    <ol class="steps">
+      <li><b>1</b>AI가 말 사이 무음, “음·어” 같은 군말, 다시 말한 부분, 기침 소리를 찾습니다</li>
+      <li><b>2</b>찾은 곳을 듣고 살릴지 자를지 고릅니다. 직접 더 자를 수도 있습니다</li>
+      <li><b>3</b>내보내기를 누르면 잘린 영상이 저장됩니다</li>
+    </ol>
+    <div class="drop-actions">
+      <button id="btnOpen2" class="primary">영상 고르기</button>
+      <label class="lang">말하는 언어
+        <select id="lang">
+          <option value="ko">한국어</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="auto">자동 감지</option>
+        </select>
+      </label>
+    </div>
+    <p class="sub">모든 처리는 이 맥 안에서만 이뤄집니다.</p>
+  </div>
+  <input id="fileInput" type="file" accept="video/*,audio/*" hidden>
+</main>
+
+<!-- 편집 화면 -->
+<main id="editor" class="editor" hidden>
+  <!-- 왼쪽: AI 컷 -->
+  <aside class="pane left">
+    <div class="pane-head">AI가 찾은 곳</div>
+    <div class="pane-body">
+      <div class="saved">
+        <div class="saved-big mono" id="savedSec"></div>
+        <div class="saved-sub" id="savedSub"></div>
+      </div>
+      <div id="typeRows" class="type-rows"></div>
+      <details class="tune">
+        <summary>찾는 기준 조정</summary>
+        <label class="slider"><span>무음 길이 기준 <output id="o_min"></output></span>
+          <input type="range" id="p_min" min="0.2" max="2" step="0.05">
+          <small>이보다 긴 무음만 자릅니다</small></label>
+        <label class="slider"><span>무음 감도 <output id="o_sens"></output></span>
+          <input type="range" id="p_sens" min="0.05" max="0.6" step="0.01">
+          <small>높이면 작은 숨소리·잡음도 무음으로 봅니다</small></label>
+        <label class="slider"><span>남길 여유 <output id="o_pad"></output></span>
+          <input type="range" id="p_pad" min="0" max="0.4" step="0.01">
+          <small>자른 자리 양옆에 남기는 숨. 작을수록 빠른 템포</small></label>
+        <label class="slider"><span>잡음 감도 <output id="o_noise"></output></span>
+          <input type="range" id="p_noise" min="0.1" max="0.8" step="0.05">
+          <small>낮출수록 기침·훌쩍임을 더 많이 잡습니다</small></label>
+        <p class="hint">기준을 바꾸면 AI 컷만 다시 찾습니다. 직접 자른 곳은 그대로 남습니다.</p>
+      </details>
+      <ol id="cutList" class="cutlist"></ol>
+    </div>
+  </aside>
+
+  <!-- 가운데: 플레이어 -->
+  <section class="pane center">
+    <div class="player"><video id="video" playsinline></video></div>
+    <div class="transport">
+      <div class="t-left mono"><span id="time">0:00.0</span><span class="muted"> / <span id="dur"></span></span></div>
+      <div class="t-mid">
+        <button id="btnPrev" class="icon" title="이전 컷 ( [ )">⏮</button>
+        <button id="btnPlay" class="icon play" title="재생 / 일시정지 (스페이스)">▶</button>
+        <button id="btnNext" class="icon" title="다음 컷 ( ] )">⏭</button>
+      </div>
+      <div class="t-right">
+        <label class="switch" title="켜면 자를 곳을 건너뛰며 재생합니다 (P)">
+          <input type="checkbox" id="preview" checked><i></i><span>잘린 상태로 재생</span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- 오른쪽: 자막 -->
+  <aside class="pane right">
+    <div class="pane-head">자막 <span class="muted small">단어 클릭: 이동 · 드래그: 골라서 자르기</span></div>
+    <div class="pane-body"><div id="script" class="script"></div></div>
+  </aside>
+
+  <!-- 아래: 타임라인 -->
+  <section class="timeline">
+    <div class="tools">
+      <button id="tUndo" class="icon" title="되돌리기 (⌘Z)">↶</button>
+      <button id="tRedo" class="icon" title="다시 하기 (⇧⌘Z)">↷</button>
+      <span class="sep"></span>
+      <button id="tMark" title="재생 위치에서 시작점(I)·끝점(O)을 찍어 자릅니다">✂ 구간 자르기</button>
+      <button id="tToggle" title="선택한 컷 켜기·끄기 (X)" disabled>켜기/끄기</button>
+      <button id="tDelete" title="선택한 컷 지우기 (⌫)" disabled>지우기</button>
+      <span id="markHint" class="mark-hint"></span>
+      <div class="spacer"></div>
+      <div class="legend" id="legend"></div>
+      <span class="sep"></span>
+      <button id="zOut" class="icon" title="축소">−</button>
+      <input type="range" id="zoom" min="0" max="400" value="0">
+      <button id="zIn" class="icon" title="확대">+</button>
+      <button id="help" class="icon" title="단축키">?</button>
+    </div>
+    <div class="tracks">
+      <div class="track-labels"><span>영상</span><span>소리</span></div>
+      <div id="wave" class="wave"></div>
+    </div>
+  </section>
+</main>
+
+<div id="selBar" class="selbar" hidden>
+  <button id="selCut">✂ 이 말 자르기</button>
+  <button id="selKeep">살리기</button>
+</div>
+
+<div id="helpPop" class="help-pop" hidden>
+  <p class="big">단축키</p>
+  <dl>
+    <dt><kbd>스페이스</kbd></dt><dd>재생 / 일시정지</dd>
+    <dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>이전 / 다음 컷으로 이동</dd>
+    <dt><kbd>X</kbd></dt><dd>선택한 컷 켜기·끄기</dd>
+    <dt><kbd>⌫</kbd></dt><dd>선택한 컷 지우기</dd>
+    <dt><kbd>I</kbd> <kbd>O</kbd></dt><dd>재생 위치에 시작점·끝점 찍어 자르기</dd>
+    <dt><kbd>P</kbd></dt><dd>잘린 상태로 재생 켜기·끄기</dd>
+    <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>1초 이동 (Shift: 5초)</dd>
+    <dt><kbd>⌘Z</kbd> <kbd>⇧⌘Z</kbd></dt><dd>되돌리기 / 다시 하기</dd>
+  </dl>
+  <p class="hint">타임라인을 드래그하면 그 구간을 자릅니다. 컷 양끝을 끌면 길이가 바뀝니다.</p>
+</div>
+
+<div id="overlay" class="overlay" hidden>
+  <div class="panel">
+    <p id="ovTitle" class="big"></p>
+    <div class="progress"><div id="ovBar"></div></div>
+    <p id="ovSub" class="sub"></p>
+    <div id="ovActions" class="actions"></div>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

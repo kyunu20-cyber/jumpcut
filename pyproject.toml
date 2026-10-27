@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jumpcut"
+version = "0.1.0"
+description = "말 사이 무음·군말·반복·기침을 AI로 찾아 잘라 주는 맥용 컷 편집기"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "python-multipart>=0.0.9",
+  "numpy>=1.26",
+  "huggingface_hub>=0.24",
+  "onnxruntime>=1.18; platform_machine == 'arm64'",
+  "onnxruntime>=1.18,<1.24; platform_machine != 'arm64'",  # Intel 맥 휠은 1.23이 마지막
+  "imageio-ffmpeg>=0.5",
+  "pywebview>=5.0",
+  "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
+  "faster-whisper>=1.1; platform_machine != 'arm64'",
+]
+
+[project.optional-dependencies]
+build = ["pyinstaller>=6.10"]
+
+[project.scripts]
+jumpcut = "jumpcut.cli:main"
+jumpcut-app = "jumpcut.app:main"
+
+[tool.setuptools]
+packages = ["jumpcut"]
+
+[tool.setuptools.package-data]
+jumpcut = ["web/*", "web/vendor/*", "models/*"]

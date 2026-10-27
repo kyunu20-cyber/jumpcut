@@ -1,0 +1,42 @@
+# v로 시작하는 태그를 올리면 Apple Silicon·Intel용 dmg를 만들어 Releases에 붙인다.
+# Apple Silicon은 macOS 14 머신에서 빌드해야 mlx도 14용을 받아, macOS 14 이상 어디서나 돈다.
+name: release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-14, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ".[build]" pytest
+      - run: pytest -q
+      - run: PYTHON=python packaging/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg-${{ matrix.runner }}
+          path: dist/*.dmg
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dmgs
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dmgs/*.dmg
