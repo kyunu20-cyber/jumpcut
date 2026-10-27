@@ -1,4 +1,4 @@
-"""단어 단위 타임스탬프 받아쓰기. Apple Silicon은 mlx-whisper, Intel은 faster-whisper."""
+"""단어 단위 타임스탬프 받아쓰기(mlx-whisper). Apple Silicon 전용."""
 import os
 import platform
 import threading
@@ -7,13 +7,12 @@ from typing import Callable
 
 import numpy as np
 
-from .media import SAMPLE_RATE
 
 # 군말을 지우지 않고 받아 적도록 유도하는 프롬프트
 FILLER_PROMPT = "음, 어, 그, 아, 저기, 음... 그러니까, 어... 뭐랄까, 이제 그"
 
 MLX_MODEL = "mlx-community/whisper-large-v3-turbo"
-CT2_MODEL = "mobiuslabsgmbh/faster-whisper-large-v3-turbo"
+UNSUPPORTED = "JUMPCUT은 Apple Silicon(M1 이후) 맥에서만 동작합니다. Intel 맥은 지원하지 않습니다."
 
 Progress = Callable[[float], None]
 
@@ -22,12 +21,18 @@ def is_apple_silicon() -> bool:
     return platform.system() == "Darwin" and platform.machine() == "arm64"
 
 
+def require_apple_silicon():
+    """Intel 맥(Rosetta 포함)에서는 바로 끝낸다."""
+    if not is_apple_silicon():
+        raise SystemExit(UNSUPPORTED)
+
+
 def ensure_model(on_progress: Progress | None = None) -> str:
     """모델을 받아 두고 로컬 경로를 돌려준다. 이미 있으면 바로 돌려준다.
     huggingface_hub는 바이트 단위 진행률을 콜백으로 주지 않아서, 받는 동안 캐시 폴더 크기를 잰다."""
     from huggingface_hub import HfApi, snapshot_download
 
-    repo = MLX_MODEL if is_apple_silicon() else CT2_MODEL
+    repo = MLX_MODEL
     try:
         return snapshot_download(repo, local_files_only=True)
     except Exception:  # noqa: BLE001 — 아직 없음
@@ -52,13 +57,8 @@ def ensure_model(on_progress: Progress | None = None) -> str:
 def transcribe(audio: np.ndarray, language: str | None = "ko", on_progress: Progress | None = None,
                model: str | None = None) -> list[dict]:
     """[{text, start, end, words: [{word, start, end, prob}]}] 형태의 문장 목록."""
+    require_apple_silicon()
     model = model or ensure_model()
-    if is_apple_silicon():
-        return _mlx(audio, language, on_progress, model)
-    return _ct2(audio, language, on_progress, model)
-
-
-def _mlx(audio, language, on_progress, model):
     import importlib
 
     import tqdm as real_tqdm
@@ -88,24 +88,6 @@ def _mlx(audio, language, on_progress, model):
     finally:
         mt.tqdm = orig
     return [_segment(s["text"], s["start"], s["end"], s.get("words", [])) for s in result["segments"]]
-
-
-def _ct2(audio, language, on_progress, model_path):
-    from faster_whisper import WhisperModel
-
-    model = WhisperModel(model_path, device="cpu", compute_type="int8")
-    segments, _ = model.transcribe(
-        audio, language=language, word_timestamps=True, initial_prompt=FILLER_PROMPT,
-        condition_on_previous_text=False, vad_filter=False,
-    )
-    total = len(audio) / SAMPLE_RATE
-    out = []
-    for s in segments:
-        words = [{"word": w.word, "start": w.start, "end": w.end, "probability": w.probability} for w in s.words or []]
-        out.append(_segment(s.text, s.start, s.end, words))
-        if on_progress and total:
-            on_progress(min(s.end / total, 1.0))
-    return out
 
 
 def _segment(text, start, end, words):

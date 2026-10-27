@@ -10,6 +10,7 @@ import webview
 from webview.dom import DOMEventHandler
 
 from .api import app as api_app
+from .transcribe import require_apple_silicon
 
 VIDEO_TYPES = ("영상과 오디오 (*.mp4;*.mov;*.m4v;*.mkv;*.webm;*.avi;*.mp3;*.wav;*.m4a;*.aac)", "모든 파일 (*.*)")
 window = None
@@ -55,6 +56,7 @@ def _bind(win):
 
 def main():
     global window
+    require_apple_silicon()
     port = _free_port()
     _serve(port)
     window = webview.create_window(

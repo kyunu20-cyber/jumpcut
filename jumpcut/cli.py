@@ -5,6 +5,7 @@ from pathlib import Path
 
 from . import project, render
 from .detect import merge
+from .transcribe import require_apple_silicon
 
 
 def main(argv=None):
@@ -18,6 +19,7 @@ def main(argv=None):
     ap.add_argument("--reanalyze", action="store_true", help="저장된 분석을 무시하고 새로 받아쓰기")
     ap.add_argument("--dry-run", action="store_true", help="컷 목록만 출력")
     a = ap.parse_args(argv)
+    require_apple_silicon()
 
     src = str(Path(a.video).resolve())
     lang = None if a.lang == "auto" else a.lang

@@ -1,6 +1,6 @@
 # JUMPCUT
 
-말하는 영상에서 지루한 틈을 AI가 찾아 잘라 주는 맥 앱입니다. 토크·브이로그·강의 영상의 1차 컷 편집을 몇 분 만에 끝낼 수 있습니다.
+말하는 영상에서 지루한 틈을 AI가 찾아 잘라 주는 Apple Silicon 맥 앱입니다. 토크·브이로그·강의 영상의 1차 컷 편집을 몇 분 만에 끝낼 수 있습니다.
 
 <p align="center"><img src="packaging/icon.png" width="128" alt="JUMPCUT 아이콘"></p>
 
@@ -20,13 +20,11 @@ AI가 찾는 것은 다섯 가지입니다.
 
 ## 설치
 
-1. [Releases](../../releases)에서 내 맥에 맞는 dmg를 받습니다.
-   - Apple Silicon(M1 이후): `JUMPCUT-x.y.z-arm64.dmg`
-   - Intel 맥: `JUMPCUT-x.y.z-x86_64.dmg`
+1. [Releases](../../releases)에서 `JUMPCUT-x.y.z-arm64.dmg`를 받습니다.
 2. dmg를 열고 JUMPCUT을 응용 프로그램 폴더로 끌어다 놓습니다.
 3. 처음 열 때 “확인되지 않은 개발자” 경고가 뜨면, JUMPCUT을 **우클릭 → 열기**를 누릅니다. 애플 개발자 서명을 하지 않은 앱이라 한 번만 거치는 단계입니다.
 
-macOS 14(Sonoma) 이상이 필요합니다. 처음 분석할 때 음성 인식 모델(약 1.6GB)을 한 번 내려받습니다.
+**Apple Silicon(M1 이후) 맥과 macOS 14(Sonoma) 이상이 필요합니다. Intel 맥은 지원하지 않으며 설치해도 열리지 않습니다.** 처음 분석할 때 음성 인식 모델(약 1.6GB)을 한 번 내려받습니다.
 
 ## 사용법
 
@@ -76,7 +74,7 @@ jumpcut-app                         # 검토 화면이 있는 앱 창 열기
 
 ## 어떻게 동작하나
 
-1. **받아쓰기**: Whisper large-v3-turbo로 단어마다 시각을 붙여 받아씁니다. Apple Silicon에서는 MLX(GPU), Intel에서는 faster-whisper(CPU)를 씁니다. Whisper는 보통 “음·어”를 지우고 받아쓰기 때문에, 군말을 남기도록 유도하는 프롬프트를 함께 넣습니다.
+1. **받아쓰기**: Whisper large-v3-turbo로 단어마다 시각을 붙여 받아씁니다. Apple Silicon GPU에서 도는 MLX로 실행합니다. Whisper는 보통 “음·어”를 지우고 받아쓰기 때문에, 군말을 남기도록 유도하는 프롬프트를 함께 넣습니다.
 2. **무음**: 영상마다 바닥 소음과 말소리 크기를 재서 그 사이에 기준선을 긋습니다. 마이크나 방이 달라도 같은 설정으로 맞습니다.
 3. **반복**: 단어 1~6개 묶음이 바로 뒤에서 거의 똑같이(85% 이상) 다시 나오면 앞쪽을 자릅니다.
 4. **잡음**: YAMNet(구글의 소리 분류 모델)이 0.48초마다 소리 521종을 판정합니다. 기침 계열 점수가 높고 말 점수가 낮은 곳에서, 실제로 소리가 난 부분만 자릅니다.
@@ -104,7 +102,7 @@ PYTHON=.venv/bin/python packaging/build.sh      # dist/에 .app과 .dmg 생성
 | `jumpcut/web/` | 검토 화면(빌드 과정 없는 HTML·JS) |
 | `packaging/` | 아이콘, PyInstaller 설정, dmg 빌드 스크립트 |
 
-`v`로 시작하는 태그를 올리면 GitHub Actions가 Apple Silicon·Intel용 dmg를 만들어 Releases에 붙입니다(`.github/workflows/release.yml`). 배포용 Apple Silicon 빌드는 반드시 macOS 14 머신에서 해야 합니다. 더 새로운 macOS에서 빌드하면 그 버전 전용 MLX가 들어가서 낮은 버전 맥에서 열리지 않습니다.
+`v`로 시작하는 태그를 올리면 GitHub Actions가 Apple Silicon용 dmg를 만들어 Releases에 붙입니다(`.github/workflows/release.yml`). 배포용 Apple Silicon 빌드는 반드시 macOS 14 머신에서 해야 합니다. 더 새로운 macOS에서 빌드하면 그 버전 전용 MLX가 들어가서 낮은 버전 맥에서 열리지 않습니다.
 
 ## 라이선스
 
@@ -114,6 +112,6 @@ MIT. 앱에 함께 들어가는 FFmpeg(GPL) 등 제3자 구성 요소는 [THIRD_
 
 ## English
 
-JUMPCUT is a macOS app that finds dead air, filler words (“um”, “uh”), retakes, and coughs in talking-head videos, lets you review each cut, and exports the trimmed video. Everything runs locally: Whisper (MLX on Apple Silicon, faster-whisper on Intel) for word timestamps, YAMNet for cough/sneeze detection, and FFmpeg for a single-pass, VFR-safe render.
+JUMPCUT is an Apple Silicon macOS app that finds dead air, filler words (“um”, “uh”), retakes, and coughs in talking-head videos, lets you review each cut, and exports the trimmed video. Everything runs locally: Whisper on MLX for word timestamps, YAMNet for cough/sneeze detection, and FFmpeg for a single-pass, VFR-safe render.
 
-Download the dmg for your Mac from Releases, drag JUMPCUT to Applications, and right-click → Open on first launch (the app is not notarized). Requires macOS 14+. Set the spoken language on the start screen; Korean, English and Japanese are listed, and auto-detect works for others. CLI: `jumpcut video.mp4`. MIT licensed; see THIRD_PARTY_NOTICES.md for bundled components.
+Download the dmg for your Mac from Releases, drag JUMPCUT to Applications, and right-click → Open on first launch (the app is not notarized). Requires an Apple Silicon Mac (M1 or later) and macOS 14+; Intel Macs are not supported. Set the spoken language on the start screen; Korean, English and Japanese are listed, and auto-detect works for others. CLI: `jumpcut video.mp4`. MIT licensed; see THIRD_PARTY_NOTICES.md for bundled components.

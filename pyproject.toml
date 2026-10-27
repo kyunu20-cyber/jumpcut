@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jumpcut"
-version = "0.1.0"
-description = "말 사이 무음·군말·반복·기침을 AI로 찾아 잘라 주는 맥용 컷 편집기"
+version = "0.1.1"
+description = "말 사이 무음·군말·반복·기침을 AI로 찾아 잘라 주는 Apple Silicon 맥용 컷 편집기"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -15,12 +15,10 @@ dependencies = [
   "python-multipart>=0.0.9",
   "numpy>=1.26",
   "huggingface_hub>=0.24",
-  "onnxruntime>=1.18; platform_machine == 'arm64'",
-  "onnxruntime>=1.18,<1.24; platform_machine != 'arm64'",  # Intel 맥 휠은 1.23이 마지막
+  "onnxruntime>=1.18",
   "imageio-ffmpeg>=0.5",
   "pywebview>=5.0",
-  "mlx-whisper>=0.4; sys_platform == 'darwin' and platform_machine == 'arm64'",
-  "faster-whisper>=1.1; platform_machine != 'arm64'",
+  "mlx-whisper>=0.4",  # Apple Silicon 전용(mlx는 Intel 휠이 없어 설치 단계에서 막힘)
 ]
 
 [project.optional-dependencies]
